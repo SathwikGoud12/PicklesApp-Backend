@@ -66,7 +66,7 @@ const LoginUser = async (req, res) => {
       throw new Error("Password is incorrect");
     }
 
-    const accessToken = generateAccessToken(existingUser._id);
+    const accessToken = generateAccessToken(existingUser);
 
     const refreshToken = generateRefreshToken(existingUser._id);
 
@@ -103,7 +103,7 @@ const LoginUser = async (req, res) => {
 };
 async function logOutUser(req, res) {
   try {
-    const { userId } = req.user;
+    const { userId } = req.user._id;
     console.log("UserId from req.user in logOutUser:", userId);
     await User.findByIdAndUpdate(userId, { refreshToken: null });
     res.clearCookie("refreshToken");
