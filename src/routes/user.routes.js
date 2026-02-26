@@ -5,9 +5,10 @@ const {
   registerUser,
   LoginUser,
   logOutUser,
+  getUsers,
 } = require("../controllers/user.controller");
 
-const verifyAccessToken = require("../middlewares/Auth.middleware");
+const verifyAccessToken = require("../middlewares/auth.middleware");
 const {
   generateAccessToken,
   generateRefreshToken,
@@ -19,6 +20,7 @@ const router = express.Router();
 router.post("/register", registerUser);
 router.post("/login", LoginUser);
 router.post("/logout", verifyAccessToken, logOutUser);
+router.get("/list", verifyAccessToken, getUsers);
 
 // 🔥 Google OAuth Route - Step 1
 router.get(

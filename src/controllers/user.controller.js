@@ -4,7 +4,6 @@ const {
   generateAccessToken,
   generateRefreshToken,
 } = require("../utils/jwt-token");
-const cookie = require("cookie-parser");
 
 const registerUser = async (req, res) => {
   try {
@@ -13,30 +12,30 @@ const registerUser = async (req, res) => {
       throw new Error("All Fields are Required..");
     }
     const existingUserWithEmail = await User.exists({ email: req.body.email });
-    console.log(existingUserWithEmail);
     if (existingUserWithEmail?._id) {
       throw new Error("User with this email already exists..");
     }
     const existingUserWithFullName = await User.exists({
       fullName: req.body.fullName,
     });
-    console.log(existingUserWithFullName);
     if (existingUserWithFullName?._id) {
       throw new Error("User with this fullName already exists..");
     }
-    console.log("REGISTER API HIT");
 
     const newUser = await User.create({
       fullName,
       email,
       password,
     });
-   
-    console.log("New User Created:", newUser);
+
     res.status(201).json({
       success: true,
       message: "User Registered Successfully",
-      data: newUser,
+      data: {
+        id: newUser._id,
+        fullName: newUser.fullName,
+        email: newUser.email,
+      },
     });
   } catch (error) {
     res.status(400).json({
@@ -67,33 +66,21 @@ const LoginUser = async (req, res) => {
     }
 
     const accessToken = generateAccessToken(existingUser);
-
     const refreshToken = generateRefreshToken(existingUser._id);
 
     existingUser.refreshToken = refreshToken;
-
     await existingUser.save();
 
-    const options = {
-      httpOnly: true,
-      secure: true,
-      sameSite: "strict",
-    };
-
-    res
-      .cookie("refreshToken", refreshToken, options)
-      .cookie("accessToken", accessToken, options)
-      .status(200)
-      .json({
-        success: true,
-        message: "User Logged In Successfully",
-        accessToken,
-        user: {
-          id: existingUser._id,
-          fullName: existingUser.fullName,
-          email: existingUser.email,
-        },
-      });
+    res.status(200).json({
+      success: true,
+      message: "User Logged In Successfully",
+      accessToken,
+      user: {
+        id: existingUser._id,
+        fullName: existingUser.fullName,
+        email: existingUser.email,
+      },
+    });
   } catch (error) {
     res.status(400).json({
       error: true,
@@ -101,10 +88,10 @@ const LoginUser = async (req, res) => {
     });
   }
 };
+
 async function logOutUser(req, res) {
   try {
-    const { userId } = req.user._id;
-    console.log("UserId from req.user in logOutUser:", userId);
+    const userId = req.user._id;
     await User.findByIdAndUpdate(userId, { refreshToken: null });
     res.clearCookie("refreshToken");
     res.clearCookie("accessToken");
@@ -121,5 +108,16 @@ async function logOutUser(req, res) {
   }
 }
 
+async function getUsers(req, res) {
+  try {
+    const currentUserId = req.user._id;
+    const users = await User.find({ _id: { $ne: currentUserId } }).select(
+      "_id fullName email"
+    );
+    res.status(200).json({ success: true, users });
+  } catch (error) {
+    res.status(500).json({ error: true, message: error.message });
+  }
+}
 
-module.exports={registerUser,LoginUser,logOutUser}
+module.exports = { registerUser, LoginUser, logOutUser, getUsers };
